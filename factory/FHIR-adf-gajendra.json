@@ -1,0 +1,15 @@
+{
+	"name": "FHIR-adf-gajendra",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "a50ccf7b-792f-46bd-b490-8cf12ae2a5a6",
+		"tenantId": "ebc80dca-394a-42af-ac7d-671a9cb8b3b1"
+	}
+}

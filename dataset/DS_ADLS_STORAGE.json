@@ -1,0 +1,26 @@
+{
+	"name": "DS_ADLS_STORAGE",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_ADLS_STORAGE",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@concat('page_', formatNumber(variables('pageNum'),'0000'), '.json')",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "raw/fhir/@{pipeline().parameters.resourceType}/ingest_date=@{pipeline().parameters.ingestDate}/run_id=@{pipeline().parameters.runId}",
+					"type": "Expression"
+				}
+			}
+		},
+		"schema": {}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
