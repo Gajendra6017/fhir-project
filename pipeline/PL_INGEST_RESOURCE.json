@@ -1,0 +1,61 @@
+{
+	"name": "PL_INGEST_RESOURCE",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set variable1",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vCurrentUrl",
+					"value": "'ram'"
+				}
+			}
+		],
+		"parameters": {
+			"pResource": {
+				"type": "string",
+				"defaultValue": "Patient"
+			},
+			"pSince": {
+				"type": "string"
+			},
+			"pPageSize": {
+				"type": "int",
+				"defaultValue": 100
+			},
+			"pRunId": {
+				"type": "string"
+			},
+			"pBaseUrl": {
+				"type": "string",
+				"defaultValue": "https://hapi.fhir.org/baseR4"
+			}
+		},
+		"variables": {
+			"vCurrentUrl": {
+				"type": "String"
+			},
+			"vNextUrl": {
+				"type": "String"
+			},
+			"vPageCount": {
+				"type": "Integer"
+			},
+			"vHasNext": {
+				"type": "Boolean"
+			},
+			"vLastUpdated": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-11-13T16:23:10Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

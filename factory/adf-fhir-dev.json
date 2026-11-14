@@ -1,0 +1,15 @@
+{
+	"name": "adf-fhir-dev",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "67e22ca9-2af9-49a0-9a59-cd1e1f802103",
+		"tenantId": "ebc80dca-394a-42af-ac7d-671a9cb8b3b1"
+	}
+}

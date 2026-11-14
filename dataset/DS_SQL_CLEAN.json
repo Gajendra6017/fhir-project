@@ -1,0 +1,21 @@
+{
+	"name": "DS_SQL_CLEAN",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AZURE_SQ",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pSchemaName": {
+				"type": "string"
+			},
+			"pTableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
