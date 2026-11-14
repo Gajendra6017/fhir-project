@@ -1,0 +1,23 @@
+{
+	"name": "DS_FHIR_REST",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_FHIR_REST",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pRelativeURL": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@dataset().pRelativeURL",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

@@ -1,0 +1,203 @@
+{
+	"name": "PL_FHIR_MASTER",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_API_Metadata",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT * FROM dbo.API_Metadata\nWHERE Is_Active = 1\nORDER BY Execution_Order;",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_API_METADATA",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach_Resource",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup_API_Metadata",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup_API_Metadata').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Execute_Resource_Pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_FHIR_INGEST_RESOURCE",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pAPI_ID": "@item().API_ID",
+									"pResourceName": "@item().Resource_Name",
+									"pBaseURL": "@item().Base_URL",
+									"pRelativeURL": "@item().Relative_URL",
+									"pHTTPMethod": "@item().HTTP_Method",
+									"pPageSize": "@item().Page_Size",
+									"pPaginationType": "@item().Pagination_Type",
+									"pPaginationRule": "@item().Pagination_Rule",
+									"pLoadType": "@item().Load_Type",
+									"pTargetContainer": "@item().Target_Container",
+									"pTargetFolder": "@item().Target_Folder",
+									"pExecutionOrder": "@item().Execution_Order"
+								}
+							}
+						},
+						{
+							"name": "PL_FHIR_STAGING",
+							"type": "ExecutePipeline",
+							"state": "Inactive",
+							"onInactiveMarkAs": "Succeeded",
+							"dependsOn": [
+								{
+									"activity": "Execute_Resource_Pipeline",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_FHIR_STAGING",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pResourceName": "@pipeline().parameters.pResourceName",
+									"pRunID": "@variables('vRunID')",
+									"pTargetContainer": "@pipeline().parameters.pTargetContainer",
+									"pTargetFolder": "@pipeline().parameters.pTargetFolder"
+								}
+							}
+						},
+						{
+							"name": "Execute_PL_FHIR_TRANSFORM",
+							"type": "ExecutePipeline",
+							"state": "Inactive",
+							"onInactiveMarkAs": "Succeeded",
+							"dependsOn": [
+								{
+									"activity": "PL_FHIR_STAGING",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "PL_FHIR_TRANSFORM",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"pResourceName": "@pipeline().parameters.pResourceName",
+									"pRunID": "@variables('vRunID')"
+								}
+							}
+						},
+						{
+							"name": "SP_Update_Watermark",
+							"type": "SqlServerStoredProcedure",
+							"state": "Inactive",
+							"onInactiveMarkAs": "Succeeded",
+							"dependsOn": [
+								{
+									"activity": "Execute_PL_FHIR_TRANSFORM",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Update_Watermark]"
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SP_Audit_Success",
+							"type": "SqlServerStoredProcedure",
+							"state": "Inactive",
+							"onInactiveMarkAs": "Succeeded",
+							"dependsOn": [
+								{
+									"activity": "SP_Update_Watermark",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Success]"
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": []
+	}
+}

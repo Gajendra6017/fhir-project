@@ -1,41 +1,259 @@
 {
 	"name": "PL_FHIR_INGEST_RESOURCE",
 	"properties": {
+		"activities": [
+			{
+				"name": "Set_Run_ID",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vRunID",
+					"value": "@pipeline().RunId"
+				}
+			},
+			{
+				"name": "Lookup_Watermark",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set_Run_ID",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT\n    Resource_Name,\n    Last_Watermark\nFROM dbo.ETL_Watermark\nWHERE Resource_Name = '@{pipeline().parameters.pResourceName}';",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_WATERMARK",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Set_Cutoff_Time",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Lookup_Watermark",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "vCutoffTime",
+					"value": "@utcNow()"
+				}
+			},
+			{
+				"name": "If_FULL_OR_INCREMENTAL",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Set_Cutoff_Time",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@or(\n    equals(pipeline().parameters.pLoadType,'FULL'),\n    empty(activity('Lookup_Watermark').output.firstRow.Last_Watermark)\n)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Set_Initial_URL_INCREMENTAL",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "vInitialRelativeURL",
+								"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_lastUpdated=ge',\n    formatDateTime(\n        addMinutes(\n            activity('Lookup_Watermark').output.firstRow.Last_Watermark,\n            -5\n        ),\n        'yyyy-MM-ddTHH:mm:ssZ'\n    ),\n    '&_count=',\n    string(pipeline().parameters.pPageSize)\n)"
+							}
+						},
+						{
+							"name": "Copy_FHIR_To_Bronze",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set_Initial_URL_INCREMENTAL",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET",
+									"paginationRules": {
+										"AbsoluteUrl": "$.link[?(@.relation=='next')].url",
+										"MaxRequestNumber": "100"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_FHIR_REST",
+									"type": "DatasetReference",
+									"parameters": {
+										"pRelativeURL": {
+											"value": "@variables('vInitialRelativeURL')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_JSON",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFileName": "@item().name",
+										"pContainer": "@pipeline().parameters.pTargetContainer",
+										"pFolderPath": "@pipeline().parameters.pTargetFolder"
+									}
+								}
+							]
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Set_Initial_URL_FULL",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "vInitialRelativeURL",
+								"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_count=',\n    string(pipeline().parameters.pPageSize)\n)"
+							}
+						}
+					]
+				}
+			}
+		],
 		"parameters": {
-			"pResource": {
+			"pAPI_ID": {
+				"type": "int",
+				"defaultValue": 1
+			},
+			"pResourceName": {
 				"type": "string",
 				"defaultValue": "Patient"
 			},
-			"pSince": {
-				"type": "string"
+			"pBaseURL": {
+				"type": "string",
+				"defaultValue": "https://hapi.fhir.org/baseR4"
+			},
+			"pRelativeURL": {
+				"type": "string",
+				"defaultValue": "/baseR4/Patient"
+			},
+			"pHTTPMethod": {
+				"type": "string",
+				"defaultValue": "GET"
 			},
 			"pPageSize": {
 				"type": "int",
 				"defaultValue": 100
 			},
-			"pRunId": {
-				"type": "string"
-			},
-			"pBaseUrl": {
+			"pPaginationType": {
 				"type": "string",
-				"defaultValue": "https://hapi.fhir.org/baseR4"
+				"defaultValue": "FHIR_NEXT_LINK"
+			},
+			"pPaginationRule": {
+				"type": "string",
+				"defaultValue": "JSONPath rule"
+			},
+			"pLoadType": {
+				"type": "string",
+				"defaultValue": "FULL"
+			},
+			"pTargetContainer": {
+				"type": "string",
+				"defaultValue": "fhir-data"
+			},
+			"pTargetFolder": {
+				"type": "string",
+				"defaultValue": "bronze/Patient"
+			},
+			"pExecutionOrder": {
+				"type": "int",
+				"defaultValue": 1
 			}
 		},
 		"variables": {
-			"vCurrentUrl": {
+			"vRunID": {
 				"type": "String"
 			},
-			"vNextUrl": {
+			"vCutoffTime": {
 				"type": "String"
 			},
-			"vPageCount": {
+			"vLastWatermark": {
+				"type": "String"
+			},
+			"vInitialRelativeURL": {
+				"type": "String"
+			},
+			"vRecordsExtracted": {
 				"type": "Integer"
 			},
-			"vHasNext": {
-				"type": "Boolean"
-			},
-			"vLastUpdated": {
-				"type": "String"
+			"vPagesExtracted": {
+				"type": "Integer"
 			}
 		},
 		"annotations": [],

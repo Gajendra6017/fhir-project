@@ -1,0 +1,16 @@
+{
+	"name": "DS_SQL_WATERMARK",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AZURE_SQ",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "ETL_Watermark"
+		}
+	}
+}

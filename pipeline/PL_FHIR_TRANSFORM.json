@@ -1,0 +1,60 @@
+{
+	"name": "PL_FHIR_TRANSFORM",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_Staging_Count",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT COUNT(*) AS Total_Records\nFROM dbo.FHIR_Raw_Staging\nWHERE Resource_Name = '@{pipeline().parameters.pResourceName}'\nAND Run_ID = '@{pipeline().parameters.pRunID}';",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_SQL_STAGING",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "IF_Data_Available",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Lookup_Staging_Count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@greater(\n    activity('Lookup_Staging_Count').output.firstRow.Total_Records,\n    0\n)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pResourceName": {
+				"type": "string"
+			},
+			"pRunID": {
+				"type": "string"
+			}
+		},
+		"annotations": []
+	}
+}

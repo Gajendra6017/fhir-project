@@ -1,18 +1,18 @@
 {
-	"name": "DS_BLOB_JSON",
+	"name": "DS_ADLS_JSON",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "LS_ADLS_GEN2",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
-			"pFolderPath": {
-				"type": "string"
-			},
 			"pFileName": {
 				"type": "string"
 			},
-			"pFileSystem": {
+			"pContainer": {
+				"type": "string"
+			},
+			"pFolderPath": {
 				"type": "string"
 			}
 		},
@@ -30,7 +30,7 @@
 					"type": "Expression"
 				},
 				"fileSystem": {
-					"value": "@dataset().pFileSystem",
+					"value": "@dataset().pContainer",
 					"type": "Expression"
 				}
 			}
