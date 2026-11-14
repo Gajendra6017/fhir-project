@@ -1,22 +1,6 @@
 {
-	"name": "PL_INGEST_RESOURCE",
+	"name": "PL_FHIR_INGEST_RESOURCE",
 	"properties": {
-		"activities": [
-			{
-				"name": "Set variable1",
-				"type": "SetVariable",
-				"dependsOn": [],
-				"policy": {
-					"secureOutput": false,
-					"secureInput": false
-				},
-				"userProperties": [],
-				"typeProperties": {
-					"variableName": "vCurrentUrl",
-					"value": "'ram'"
-				}
-			}
-		],
 		"parameters": {
 			"pResource": {
 				"type": "string",
