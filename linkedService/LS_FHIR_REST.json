@@ -1,0 +1,12 @@
+{
+	"name": "LS_FHIR_REST",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://hapi.fhir.org/baseR4",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
