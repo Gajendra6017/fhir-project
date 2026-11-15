@@ -1,0 +1,47 @@
+{
+	"name": "PL_FHIR_TRANSFORM_ROUTER",
+	"properties": {
+		"activities": [
+			{
+				"name": "Switch_Resource",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.pResourceName",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "Patient",
+							"activities": [
+								{
+									"name": "SP_Process_Patient",
+									"type": "SqlServerStoredProcedure",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"storedProcedureName": "[dbo].[SP_Process_Patient]"
+									},
+									"linkedServiceName": {
+										"referenceName": "LS_AZURE_SQ",
+										"type": "LinkedServiceReference"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"annotations": []
+	}
+}

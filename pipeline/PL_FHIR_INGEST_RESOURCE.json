@@ -13,7 +13,10 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "vRunID",
-					"value": "@pipeline().RunId"
+					"value": {
+						"value": "@pipeline().RunId",
+						"type": "Expression"
+					}
 				}
 			},
 			{
@@ -38,7 +41,10 @@
 				"typeProperties": {
 					"source": {
 						"type": "AzureSqlSource",
-						"sqlReaderQuery": "SELECT\n    Resource_Name,\n    Last_Watermark\nFROM dbo.ETL_Watermark\nWHERE Resource_Name = '@{pipeline().parameters.pResourceName}';",
+						"sqlReaderQuery": {
+							"value": "SELECT\n    Resource_Name,\n    Last_Watermark\nFROM dbo.ETL_Watermark\nWHERE Resource_Name = '@{pipeline().parameters.pResourceName}';",
+							"type": "Expression"
+						},
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -66,7 +72,10 @@
 				"userProperties": [],
 				"typeProperties": {
 					"variableName": "vCutoffTime",
-					"value": "@utcNow()"
+					"value": {
+						"value": "@utcNow()",
+						"type": "Expression"
+					}
 				}
 			},
 			{
@@ -98,7 +107,10 @@
 							"userProperties": [],
 							"typeProperties": {
 								"variableName": "vInitialRelativeURL",
-								"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_lastUpdated=ge',\n    formatDateTime(\n        addMinutes(\n            activity('Lookup_Watermark').output.firstRow.Last_Watermark,\n            -5\n        ),\n        'yyyy-MM-ddTHH:mm:ssZ'\n    ),\n    '&_count=',\n    string(pipeline().parameters.pPageSize)\n)"
+								"value": {
+									"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_lastUpdated=ge',\n    formatDateTime(\n        addMinutes(\n            activity('Lookup_Watermark').output.firstRow.Last_Watermark,\n            -5\n        ),\n        'yyyy-MM-ddTHH:mm:ssZ'\n    ),\n    '&_count=',\n    string(pipeline().parameters.pPageSize)\n)",
+									"type": "Expression"
+								}
 							}
 						},
 						{
@@ -159,7 +171,10 @@
 									"referenceName": "DS_ADLS_JSON",
 									"type": "DatasetReference",
 									"parameters": {
-										"pFileName": "@item().name",
+										"pFileName": {
+											"value": "@concat('FHIR_', pipeline().parameters.pResourceName, '_', variables('vRunID'), '.json')",
+											"type": "Expression"
+										},
 										"pContainer": "@pipeline().parameters.pTargetContainer",
 										"pFolderPath": "@pipeline().parameters.pTargetFolder"
 									}
@@ -179,7 +194,10 @@
 							"userProperties": [],
 							"typeProperties": {
 								"variableName": "vInitialRelativeURL",
-								"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_count=',\n    string(pipeline().parameters.pPageSize)\n)"
+								"value": {
+									"value": "@concat(\n    pipeline().parameters.pRelativeURL,\n    '?_count=',\n    string(pipeline().parameters.pPageSize)\n)",
+									"type": "Expression"
+								}
 							}
 						}
 					]

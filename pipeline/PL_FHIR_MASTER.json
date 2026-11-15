@@ -54,6 +54,7 @@
 							"policy": {
 								"secureInput": false
 							},
+							"userProperties": [],
 							"typeProperties": {
 								"pipeline": {
 									"referenceName": "PL_FHIR_INGEST_RESOURCE",
@@ -61,26 +62,60 @@
 								},
 								"waitOnCompletion": true,
 								"parameters": {
-									"pAPI_ID": "@item().API_ID",
-									"pResourceName": "@item().Resource_Name",
-									"pBaseURL": "@item().Base_URL",
-									"pRelativeURL": "@item().Relative_URL",
-									"pHTTPMethod": "@item().HTTP_Method",
-									"pPageSize": "@item().Page_Size",
-									"pPaginationType": "@item().Pagination_Type",
-									"pPaginationRule": "@item().Pagination_Rule",
-									"pLoadType": "@item().Load_Type",
-									"pTargetContainer": "@item().Target_Container",
-									"pTargetFolder": "@item().Target_Folder",
-									"pExecutionOrder": "@item().Execution_Order"
+									"pAPI_ID": {
+										"value": "@item().API_ID",
+										"type": "Expression"
+									},
+									"pResourceName": {
+										"value": "@item().Resource_Name",
+										"type": "Expression"
+									},
+									"pBaseURL": {
+										"value": "@item().Base_URL",
+										"type": "Expression"
+									},
+									"pRelativeURL": {
+										"value": "@item().Relative_URL",
+										"type": "Expression"
+									},
+									"pHTTPMethod": {
+										"value": "@item().HTTP_Method",
+										"type": "Expression"
+									},
+									"pPageSize": {
+										"value": "@item().Page_Size",
+										"type": "Expression"
+									},
+									"pPaginationType": {
+										"value": "@item().Pagination_Type",
+										"type": "Expression"
+									},
+									"pPaginationRule": {
+										"value": "@item().Pagination_Rule",
+										"type": "Expression"
+									},
+									"pLoadType": {
+										"value": "@item().Load_Type",
+										"type": "Expression"
+									},
+									"pTargetContainer": {
+										"value": "@item().Target_Container",
+										"type": "Expression"
+									},
+									"pTargetFolder": {
+										"value": "@item().Target_Folder",
+										"type": "Expression"
+									},
+									"pExecutionOrder": {
+										"value": "@item().Execution_Order",
+										"type": "Expression"
+									}
 								}
 							}
 						},
 						{
 							"name": "PL_FHIR_STAGING",
 							"type": "ExecutePipeline",
-							"state": "Inactive",
-							"onInactiveMarkAs": "Succeeded",
 							"dependsOn": [
 								{
 									"activity": "Execute_Resource_Pipeline",
@@ -100,18 +135,28 @@
 								},
 								"waitOnCompletion": true,
 								"parameters": {
-									"pResourceName": "@pipeline().parameters.pResourceName",
-									"pRunID": "@variables('vRunID')",
-									"pTargetContainer": "@pipeline().parameters.pTargetContainer",
-									"pTargetFolder": "@pipeline().parameters.pTargetFolder"
+									"pResourceName": {
+										"value": "@pipeline().parameters.pResourceName",
+										"type": "Expression"
+									},
+									"pRunID": {
+										"value": "@variables('vRunID')",
+										"type": "Expression"
+									},
+									"pTargetContainer": {
+										"value": "@pipeline().parameters.pTargetContainer",
+										"type": "Expression"
+									},
+									"pTargetFolder": {
+										"value": "@pipeline().parameters.pTargetFolder",
+										"type": "Expression"
+									}
 								}
 							}
 						},
 						{
 							"name": "Execute_PL_FHIR_TRANSFORM",
 							"type": "ExecutePipeline",
-							"state": "Inactive",
-							"onInactiveMarkAs": "Succeeded",
 							"dependsOn": [
 								{
 									"activity": "PL_FHIR_STAGING",
@@ -131,16 +176,20 @@
 								},
 								"waitOnCompletion": true,
 								"parameters": {
-									"pResourceName": "@pipeline().parameters.pResourceName",
-									"pRunID": "@variables('vRunID')"
+									"pResourceName": {
+										"value": "@pipeline().parameters.pResourceName",
+										"type": "Expression"
+									},
+									"pRunID": {
+										"value": "@variables('vRunID')",
+										"type": "Expression"
+									}
 								}
 							}
 						},
 						{
 							"name": "SP_Update_Watermark",
 							"type": "SqlServerStoredProcedure",
-							"state": "Inactive",
-							"onInactiveMarkAs": "Succeeded",
 							"dependsOn": [
 								{
 									"activity": "Execute_PL_FHIR_TRANSFORM",
@@ -168,8 +217,6 @@
 						{
 							"name": "SP_Audit_Success",
 							"type": "SqlServerStoredProcedure",
-							"state": "Inactive",
-							"onInactiveMarkAs": "Succeeded",
 							"dependsOn": [
 								{
 									"activity": "SP_Update_Watermark",
@@ -198,6 +245,25 @@
 				}
 			}
 		],
+		"parameters": {
+			"pTargetContainer": {
+				"type": "string",
+				"defaultValue": "fhir-data"
+			},
+			"pTargetFolder": {
+				"type": "string",
+				"defaultValue": "bronze/Patient"
+			},
+			"pResourceName": {
+				"type": "string",
+				"defaultValue": "Patient"
+			}
+		},
+		"variables": {
+			"vRunId": {
+				"type": "String"
+			}
+		},
 		"annotations": []
 	}
 }

@@ -13,7 +13,14 @@
 					"secureOutput": false,
 					"secureInput": false
 				},
-				"userProperties": []
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Create_Gold_Views]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AZURE_SQ",
+					"type": "LinkedServiceReference"
+				}
 			}
 		],
 		"annotations": []
