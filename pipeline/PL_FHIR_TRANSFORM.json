@@ -5,7 +5,14 @@
 			{
 				"name": "Lookup_Staging_Count",
 				"type": "Lookup",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "SP_Audit_Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
@@ -69,6 +76,80 @@
 							}
 						}
 					]
+				}
+			},
+			{
+				"name": "SP_Audit_Start",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Audit_Start]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AZURE_SQ",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP_Audit_Success",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IF_Data_Available",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Audit_Success]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AZURE_SQ",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "SP_Audit_Failure",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "IF_Data_Available",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Audit_Failure]"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AZURE_SQ",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],

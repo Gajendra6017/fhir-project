@@ -5,7 +5,14 @@
 			{
 				"name": "Set_Run_ID",
 				"type": "SetVariable",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "SP_Audit_Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
 				"policy": {
 					"secureOutput": false,
 					"secureInput": false
@@ -114,7 +121,7 @@
 							}
 						},
 						{
-							"name": "Copy_FHIR_To_Bronze",
+							"name": "Copy_FHIR_Incremental",
 							"type": "Copy",
 							"dependsOn": [
 								{
@@ -180,6 +187,106 @@
 									}
 								}
 							]
+						},
+						{
+							"name": "SP_Audit_Success_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_FHIR_Incremental",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Success]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Records_Extracted": {
+										"value": {
+											"value": "@activity('Copy_FHIR_Incremental').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SP_Audit_Failure_copy1",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_FHIR_Incremental",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Failure]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Error_Message": {
+										"value": {
+											"value": "@activity('Copy_FHIR_Incremental').output.error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
 						}
 					],
 					"ifTrueActivities": [
@@ -199,8 +306,212 @@
 									"type": "Expression"
 								}
 							}
+						},
+						{
+							"name": "Copy_FHIR_Full",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "Set_Initial_URL_FULL",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET",
+									"paginationRules": {
+										"AbsoluteUrl": "$.link[?(@.relation=='next')].url",
+										"MaxRequestNumber": "100"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_FHIR_REST",
+									"type": "DatasetReference",
+									"parameters": {
+										"pRelativeURL": {
+											"value": "@variables('vInitialRelativeURL')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_ADLS_JSON",
+									"type": "DatasetReference",
+									"parameters": {
+										"pFileName": {
+											"value": "@concat('FHIR_', pipeline().parameters.pResourceName, '_', variables('vRunID'), '.json')",
+											"type": "Expression"
+										},
+										"pContainer": "@pipeline().parameters.pTargetContainer",
+										"pFolderPath": "@pipeline().parameters.pTargetFolder"
+									}
+								}
+							]
+						},
+						{
+							"name": "SP_Audit_Success",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_FHIR_Full",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Success]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Records_Extracted": {
+										"value": {
+											"value": "@activity('Copy_FHIR_Full').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "Int64"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SP_Audit_Failure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_FHIR_Full",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Failure]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Error_Message": {
+										"value": {
+											"value": "@activity('Copy_FHIR_Full').output.error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
 						}
 					]
+				}
+			},
+			{
+				"name": "SP_Audit_Start",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[SP_Audit_Start]",
+					"storedProcedureParameters": {
+						"Run_ID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Resource_Name": {
+							"value": {
+								"value": "@pipeline().parameters.pResourceName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AZURE_SQ",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],

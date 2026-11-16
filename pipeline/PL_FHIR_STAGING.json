@@ -5,7 +5,14 @@
 			{
 				"name": "Get_Bronze_Files",
 				"type": "GetMetadata",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "SP_Audit_Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
@@ -19,10 +26,7 @@
 						"referenceName": "DS_ADLS_JSON",
 						"type": "DatasetReference",
 						"parameters": {
-							"pFileName": {
-								"value": "@(coalesce(null) / '')",
-								"type": "Expression"
-							},
+							"pFileName": "@string('')",
 							"pContainer": {
 								"value": "@pipeline().parameters.pTargetContainer",
 								"type": "Expression"
@@ -146,21 +150,114 @@
 									}
 								}
 							]
+						},
+						{
+							"name": "SP_Audit_Success",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_Bronze_To_SQL",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Success]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Records_Extracted": {
+										"value": {
+											"value": "@activity('Copy_Bronze_To_SQL').output.rowsCopied",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "SP_Audit_Failure",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_Bronze_To_SQL",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[SP_Audit_Failure]",
+								"storedProcedureParameters": {
+									"Run_ID": {
+										"value": {
+											"value": "@pipeline().RunId",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Resource_Name": {
+										"value": {
+											"value": "@pipeline().parameters.pResourceName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Error_Message": {
+										"value": {
+											"value": "@activity('Copy_Bronze_To_SQL').output.error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AZURE_SQ",
+								"type": "LinkedServiceReference"
+							}
 						}
 					]
 				}
 			},
 			{
-				"name": "SP_Staging_Audit",
+				"name": "SP_Audit_Start",
 				"type": "SqlServerStoredProcedure",
-				"dependsOn": [
-					{
-						"activity": "ForEach_Bronze_File",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
+				"dependsOn": [],
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
@@ -170,7 +267,23 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"storedProcedureName": "[dbo].[SP_Audit_Start]"
+					"storedProcedureName": "[dbo].[SP_Audit_Start]",
+					"storedProcedureParameters": {
+						"Run_ID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"Resource_Name": {
+							"value": {
+								"value": "@pipeline().parameters.pResourceName",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
 				},
 				"linkedServiceName": {
 					"referenceName": "LS_AZURE_SQ",
@@ -180,9 +293,6 @@
 		],
 		"parameters": {
 			"pResourceName": {
-				"type": "string"
-			},
-			"pRunID": {
 				"type": "string"
 			},
 			"pTargetContainer": {
